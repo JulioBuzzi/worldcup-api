@@ -11,8 +11,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.UUID;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/admin")
@@ -28,7 +27,7 @@ public class AdminController {
 
     // ── PARTIDAS ──────────────────────────────────────────
     @PostMapping("/partidas")
-    public ResponseEntity<Partida> criarPartida(@Valid @RequestBody PartidaRequest req) {
+    public ResponseEntity<Map<String, Object>> criarPartida(@Valid @RequestBody PartidaRequest req) {
         Selecao casa = selecaoRepository.findById(req.selecaoCasaId())
                 .orElseThrow(() -> new IllegalArgumentException("Seleção casa não encontrada"));
         Selecao visitante = selecaoRepository.findById(req.selecaoVisitanteId())
@@ -41,29 +40,29 @@ public class AdminController {
         partida.setDataHora(req.dataHora());
         partida.setRodada(req.rodada());
 
-        return ResponseEntity.ok(partidaRepository.save(partida));
+        Partida saved = partidaRepository.save(partida);
+        return ResponseEntity.ok(Map.of("id", saved.getId(), "message", "Partida criada"));
     }
 
     @PutMapping("/partidas/{id}/placar")
-    public ResponseEntity<Partida> atualizarPlacar(@PathVariable UUID id,
-                                                    @Valid @RequestBody PlacarRequest req) {
+    public ResponseEntity<Map<String, Object>> atualizarPlacar(@PathVariable UUID id,
+                                                                @Valid @RequestBody PlacarRequest req) {
         Partida partida = partidaRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Partida não encontrada"));
 
+        boolean encerrando = req.encerrada() && !partida.getEncerrada();
+
         partida.setGolsCasa(req.golsCasa().shortValue());
         partida.setGolsVisitante(req.golsVisitante().shortValue());
-
-        boolean encerrando = req.encerrada() && !partida.getEncerrada();
         partida.setEncerrada(req.encerrada());
 
-        Partida saved = partidaRepository.save(partida);
+        partidaRepository.save(partida);
 
-        // Calcular pontos se encerrada agora
         if (encerrando) {
-            calcularPontos(saved);
+            calcularPontos(partida);
         }
 
-        return ResponseEntity.ok(saved);
+        return ResponseEntity.ok(Map.of("id", id, "message", "Placar atualizado"));
     }
 
     private void calcularPontos(Partida partida) {
@@ -88,12 +87,39 @@ public class AdminController {
 
     // ── BÔNUS ─────────────────────────────────────────────
     @GetMapping("/bonus")
-    public ResponseEntity<List<PalpiteBonus>> listarBonus() {
-        return ResponseEntity.ok(bonusRepository.findAll());
+    public ResponseEntity<List<Map<String, Object>>> listarBonus() {
+        try {
+            List<PalpiteBonus> lista = bonusRepository.findAll();
+            List<Map<String, Object>> result = lista.stream().map(b -> {
+                Map<String, Object> map = new LinkedHashMap<>();
+                map.put("id", b.getId());
+                map.put("campeao", b.getCampeao());
+                map.put("neymarGol", b.getNeymarGol());
+                map.put("artilheiro", b.getArtilheiro());
+                map.put("brasilFase", b.getBrasilFase());
+                map.put("campeaoAcertou", b.getCampeaoAcertou());
+                map.put("neymarGolAcertou", b.getNeymarGolAcertou());
+                map.put("artilheiroAcertou", b.getArtilheiroAcertou());
+                map.put("brasilFaseAcertou", b.getBrasilFaseAcertou());
+                map.put("pontosBonus", b.getPontosBonus());
+
+                if (b.getUsuario() != null) {
+                    Map<String, Object> usuario = new LinkedHashMap<>();
+                    usuario.put("id", b.getUsuario().getId());
+                    usuario.put("nome", b.getUsuario().getNome());
+                    usuario.put("email", b.getUsuario().getEmail());
+                    map.put("usuario", usuario);
+                }
+                return map;
+            }).toList();
+            return ResponseEntity.ok(result);
+        } catch (Exception e) {
+            return ResponseEntity.ok(List.of());
+        }
     }
 
     @PutMapping("/bonus/corrigir")
-    public ResponseEntity<PalpiteBonus> corrigirBonus(@RequestBody CorrecaoBonusRequest req) {
+    public ResponseEntity<Map<String, Object>> corrigirBonus(@RequestBody CorrecaoBonusRequest req) {
         Usuario usuario = usuarioRepository.findById(req.usuarioId())
                 .orElseThrow(() -> new IllegalArgumentException("Usuário não encontrado"));
 
@@ -112,12 +138,23 @@ public class AdminController {
         if (Boolean.TRUE.equals(req.brasilFaseAcertou()))  pts += 25;
 
         bonus.setPontosBonus(pts);
-        return ResponseEntity.ok(bonusRepository.save(bonus));
+        bonusRepository.save(bonus);
+
+        return ResponseEntity.ok(Map.of("id", bonus.getId(), "pontosBonus", pts));
     }
 
     // ── USUÁRIOS ──────────────────────────────────────────
     @GetMapping("/usuarios")
-    public ResponseEntity<List<Usuario>> listarUsuarios() {
-        return ResponseEntity.ok(usuarioRepository.findAll());
+    public ResponseEntity<List<Map<String, Object>>> listarUsuarios() {
+        List<Map<String, Object>> result = usuarioRepository.findAll().stream().map(u -> {
+            Map<String, Object> map = new LinkedHashMap<>();
+            map.put("id", u.getId());
+            map.put("nome", u.getNome());
+            map.put("email", u.getEmail());
+            map.put("role", u.getRole());
+            map.put("ativo", u.getAtivo());
+            return map;
+        }).toList();
+        return ResponseEntity.ok(result);
     }
 }
