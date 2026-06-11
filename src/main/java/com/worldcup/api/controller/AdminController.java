@@ -89,7 +89,7 @@ public class AdminController {
     @GetMapping("/bonus")
     public ResponseEntity<List<Map<String, Object>>> listarBonus() {
         try {
-            List<PalpiteBonus> lista = bonusRepository.findAll();
+            List<PalpiteBonus> lista = bonusRepository.findAllWithUsuario();
             List<Map<String, Object>> result = lista.stream().map(b -> {
                 Map<String, Object> map = new LinkedHashMap<>();
                 map.put("id", b.getId());
