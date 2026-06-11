@@ -31,6 +31,13 @@ public class RankingController {
             long total = pontosPartidas + pontosBonus;
 
             Optional<Usuario> usuarioOpt = usuarioRepository.findById(userId);
+
+            // Pular admin do ranking
+            if (usuarioOpt.isPresent() &&
+                usuarioOpt.get().getRole().name().equals("ADMIN")) {
+                continue;
+            }
+
             long acertosExatos = usuarioOpt
                     .map(palpiteRepository::countAcertosExatos)
                     .orElse(0L);
@@ -39,6 +46,7 @@ public class RankingController {
             entry.put("posicao", pos++);
             entry.put("usuarioId", userId);
             entry.put("nome", nome);
+            entry.put("role", usuarioOpt.map(u -> u.getRole().name()).orElse("USER"));
             entry.put("pontosPartidas", pontosPartidas);
             entry.put("pontosBonus", pontosBonus);
             entry.put("totalPontos", total);
