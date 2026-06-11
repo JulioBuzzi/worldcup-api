@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "palpite", schema = "worldcup",
+@Table(name = "palpite",
         uniqueConstraints = @UniqueConstraint(columnNames = {"usuario_id", "partida_id"}))
 public class Palpite {
 

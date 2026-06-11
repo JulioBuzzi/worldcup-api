@@ -15,7 +15,7 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "usuario", schema = "worldcup")
+@Table(name = "usuario")
 public class Usuario implements UserDetails {
 
     @Id

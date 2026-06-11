@@ -9,7 +9,7 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "selecao", schema = "worldcup")
+@Table(name = "selecao")
 public class Selecao {
 
     @Id

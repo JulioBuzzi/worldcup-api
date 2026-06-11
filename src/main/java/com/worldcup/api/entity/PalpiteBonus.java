@@ -10,7 +10,7 @@ import java.util.UUID;
 
 @Data
 @Entity
-@Table(name = "palpite_bonus", schema = "worldcup")
+@Table(name = "palpite_bonus")
 public class PalpiteBonus {
 
     @Id
