@@ -12,9 +12,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.List;
-import java.util.Map;
-import java.util.LinkedHashMap;
+import java.util.*;
 
 @RestController
 @RequestMapping("/api/palpites")
@@ -45,14 +43,31 @@ public class PalpiteController {
         return ResponseEntity.ok(toMap(saved));
     }
 
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deletar(@PathVariable UUID id,
+                                         @AuthenticationPrincipal Usuario usuario) {
+        Palpite palpite = palpiteRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Palpite não encontrado"));
+
+        // Só pode deletar o próprio palpite
+        if (!palpite.getUsuario().getId().equals(usuario.getId())) {
+            throw new IllegalArgumentException("Sem permissão");
+        }
+
+        // Não pode deletar se a partida estiver encerrada
+        if (palpite.getPartida().getEncerrada()) {
+            throw new IllegalArgumentException("Partida já encerrada");
+        }
+
+        palpiteRepository.delete(palpite);
+        return ResponseEntity.noContent().build();
+    }
+
     @GetMapping("/meus")
     public ResponseEntity<List<Map<String, Object>>> meusPalpites(@AuthenticationPrincipal Usuario usuario) {
         try {
             List<Palpite> palpites = palpiteRepository.findByUsuario(usuario);
-            List<Map<String, Object>> result = palpites.stream()
-                    .map(this::toMap)
-                    .toList();
-            return ResponseEntity.ok(result);
+            return ResponseEntity.ok(palpites.stream().map(this::toMap).toList());
         } catch (Exception e) {
             return ResponseEntity.ok(List.of());
         }
