@@ -4,6 +4,7 @@ import com.worldcup.api.security.JwtFilter;
 import lombok.RequiredArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
@@ -40,10 +41,24 @@ public class SecurityConfig {
             .cors(cors -> cors.configurationSource(corsConfigurationSource()))
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                .requestMatchers("/health", "/api/auth/**", "/api/selecoes/**",
-                                 "/api/partidas/**", "/api/ranking/**",
-                                 "/swagger-ui/**", "/api-docs/**", "/swagger-ui.html").permitAll()
+
+                // ── Públicos ──────────────────────────────────────────
+                .requestMatchers("/health").permitAll()
+                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+
+                // Swagger (desabilitar em produção se quiser mais segurança)
+                .requestMatchers("/swagger-ui/**", "/swagger-ui.html", "/api-docs/**").permitAll()
+
+                // Leitura pública — apenas GET
+                .requestMatchers(HttpMethod.GET, "/api/selecoes/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/partidas/**").permitAll()
+                .requestMatchers(HttpMethod.GET, "/api/ranking/**").permitAll()
+
+                // ── Admin only ────────────────────────────────────────
                 .requestMatchers("/api/admin/**").hasRole("ADMIN")
+
+                // ── Autenticado ───────────────────────────────────────
+                // Tudo mais exige login
                 .anyRequest().authenticated()
             )
             .authenticationProvider(authenticationProvider())
@@ -55,7 +70,12 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(List.of(
+            "https://worldcup-front.vercel.app",
+            "https://*.vercel.app",
+            "http://localhost:3000",
+            "http://localhost:5173"
+        ));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         config.setAllowedHeaders(List.of("*"));
         config.setAllowCredentials(true);
